@@ -47,7 +47,7 @@ class ElevenLabsConfig(BaseModel):
 class OpenAIConfig(BaseModel):
     """OpenAI configuration"""
     api_key: str = os.getenv("OPENAI_API_KEY", "")
-    model: str = "gpt-4o"
+    model: str = "gpt-5.2"
     temperature: float = 0.8
 
 
