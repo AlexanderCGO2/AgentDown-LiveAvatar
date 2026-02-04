@@ -113,21 +113,8 @@ class LiveAvatarGenerator:
         print(f"   Steps: {num_inference_steps}")
         print(f"   Clips: {num_clips}")
         
-        # Create sample config for LiveAvatar
-        sample_config = {
-            "agent_down": {
-                "prompt": prompt or "A person speaking naturally, professional studio lighting, high quality",
-                "image": str(reference_image.absolute()),
-                "audio": str(audio_path.absolute()),
-                "num_clip": num_clips
-            }
-        }
-        
-        # Write temp config
-        config_path = output_path.parent / "liveavatar_config.json"
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(config_path, "w") as f:
-            json.dump(sample_config, f, indent=2)
+        # Ensure output directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         
         # Set required environment variables for single-GPU distributed mode
         env = os.environ.copy()
@@ -138,7 +125,8 @@ class LiveAvatarGenerator:
         env["WORLD_SIZE"] = "1"
         env["LOCAL_RANK"] = "0"
         
-        # Build command using plain python (not torchrun) with env vars set
+        # Build command using plain python with explicit image/audio/prompt args
+        # (sample_list is for batch mode, but we also need individual args)
         cmd = [
             "python",
             str(self.liveavatar_dir / "minimal_inference" / "batch_eval.py"),
@@ -146,7 +134,9 @@ class LiveAvatarGenerator:
             "--size", size,
             "--ckpt_dir", str(self.base_model_path),
             "--lora_path", str(self.model_path / "liveavatar.safetensors"),
-            "--sample_list", str(config_path),
+            "--image", str(reference_image.absolute()),
+            "--audio", str(audio_path.absolute()),
+            "--prompt", prompt or "A person speaking naturally, professional studio lighting",
             "--save_dir", str(output_path.parent),
             "--sample_steps", str(num_inference_steps),
             "--offload_model", "True",  # Save VRAM
