@@ -22,24 +22,32 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 class ElevenLabsConfig(BaseModel):
     """ElevenLabs TTS configuration"""
     api_key: str = os.getenv("ELEVENLABS_API_KEY", "")
-    model_id: str = "eleven_v3"
+    model: str = "eleven_v3"
+    dialogue_model: str = "eleven_v3"
     
-    # Character voice mappings
+    # Character voice IDs
     voices: dict = {
+        "SIGMA-7": "nPczCjzI2devNBz1zQrb",  # Brian
+        "NOVA": "EXAVITQu4vr4xnSDxMaL",  # Sarah
+        "GLITCH": "XB0fDUnXU5powFXDhCwa",  # Charlotte
+    }
+    
+    # Voice settings per character
+    voice_settings: dict = {
         "SIGMA-7": {
-            "voice_id": "nPczCjzI2devNBz1zQrb",  # Brian
             "stability": 0.5,
             "similarity_boost": 0.75,
+            "style": 0.3,
         },
         "NOVA": {
-            "voice_id": "EXAVITQu4vr4xnSDxMaL",  # Sarah
             "stability": 0.4,
             "similarity_boost": 0.8,
+            "style": 0.4,
         },
         "GLITCH": {
-            "voice_id": "XB0fDUnXU5powFXDhCwa",  # Charlotte
             "stability": 0.3,
             "similarity_boost": 0.6,
+            "style": 0.35,
         },
     }
 
