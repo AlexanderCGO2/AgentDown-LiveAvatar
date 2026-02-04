@@ -60,6 +60,9 @@ pip install flash_attn_3 --find-links https://windreamer.github.io/flash-attenti
     pip install flash-attn==2.8.3 --no-build-isolation
 }
 
+# Install hf_transfer for fast downloads
+pip install hf_transfer
+
 # Install project requirements
 pip install -r requirements.txt
 
