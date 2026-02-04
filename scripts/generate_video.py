@@ -116,6 +116,21 @@ class LiveAvatarGenerator:
         # Ensure output directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
+        # Create sample config for LiveAvatar (required by batch_eval.py)
+        sample_config = {
+            "agent_down": {
+                "prompt": prompt or "A person speaking naturally, professional studio lighting, high quality",
+                "image": str(reference_image.absolute()),
+                "audio": str(audio_path.absolute()),
+                "num_clip": num_clips
+            }
+        }
+        
+        # Write config file
+        config_path = output_path.parent / "liveavatar_config.json"
+        with open(config_path, "w") as f:
+            json.dump(sample_config, f, indent=2)
+        
         # Set required environment variables for single-GPU distributed mode
         env = os.environ.copy()
         env["PYTHONPATH"] = str(self.liveavatar_dir) + ":" + env.get("PYTHONPATH", "")
@@ -125,8 +140,8 @@ class LiveAvatarGenerator:
         env["WORLD_SIZE"] = "1"
         env["LOCAL_RANK"] = "0"
         
-        # Build command using plain python with explicit image/audio/prompt args
-        # (sample_list is for batch mode, but we also need individual args)
+        # Build command using plain python with sample_list (required) AND individual args
+        # batch_eval.py requires sample_list but also reads args.image/audio/prompt directly
         cmd = [
             "python",
             str(self.liveavatar_dir / "minimal_inference" / "batch_eval.py"),
@@ -134,6 +149,7 @@ class LiveAvatarGenerator:
             "--size", size,
             "--ckpt_dir", str(self.base_model_path),
             "--lora_path", str(self.model_path / "liveavatar.safetensors"),
+            "--sample_list", str(config_path),
             "--image", str(reference_image.absolute()),
             "--audio", str(audio_path.absolute()),
             "--prompt", prompt or "A person speaking naturally, professional studio lighting",
