@@ -106,6 +106,24 @@ class LiveAvatarGenerator:
         else:
             size = "832*480"
         
+        # Calculate num_clips based on audio duration if not explicitly set high
+        # Each clip is ~48 frames at 25fps = ~1.92 seconds
+        # We need to cover the entire audio
+        try:
+            import subprocess as sp
+            result = sp.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration", 
+                 "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)],
+                capture_output=True, text=True
+            )
+            audio_duration = float(result.stdout.strip())
+            clip_duration = 48 / 25  # ~1.92 seconds per clip
+            calculated_clips = int(audio_duration / clip_duration) + 1
+            num_clips = max(num_clips, calculated_clips)
+            print(f"🎬 Audio duration: {audio_duration:.1f}s, need {num_clips} clips")
+        except Exception as e:
+            print(f"⚠️ Could not calculate audio duration: {e}, using {num_clips} clips")
+        
         print(f"🎬 Generating video with LiveAvatar...")
         print(f"   Reference: {reference_image}")
         print(f"   Audio: {audio_path}")
