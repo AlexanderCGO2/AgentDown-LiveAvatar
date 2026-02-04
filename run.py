@@ -219,7 +219,7 @@ Examples:
         help="Segment type"
     )
     segment_parser.add_argument("--topic", type=str, required=True, help="Topic to discuss")
-    segment_parser.add_argument("--duration", type=int, default=60, help="Target duration in seconds")
+    segment_parser.add_argument("--duration", type=int, default=30, help="Target duration in seconds (default: 30 for testing)")
     segment_parser.add_argument("--resolution", type=str, default="480p", choices=["480p", "720p"])
     segment_parser.add_argument("--steps", type=int, default=4, help="Inference steps (4 recommended)")
     segment_parser.add_argument("--no-intro", action="store_true", help="Skip intro")

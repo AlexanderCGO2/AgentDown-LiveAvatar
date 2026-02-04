@@ -129,9 +129,21 @@ class LiveAvatarGenerator:
         with open(config_path, "w") as f:
             json.dump(sample_config, f, indent=2)
         
-        # Build command
+        # Use the single-GPU shell script approach
+        # Set required environment variables for single-GPU mode
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(self.liveavatar_dir) + ":" + env.get("PYTHONPATH", "")
+        env["MASTER_ADDR"] = "localhost"
+        env["MASTER_PORT"] = "29500"
+        env["RANK"] = "0"
+        env["WORLD_SIZE"] = "1"
+        env["LOCAL_RANK"] = "0"
+        
+        # Build command using torchrun for single GPU
         cmd = [
-            "python", "-u",
+            "torchrun",
+            "--nproc_per_node=1",
+            "--master_port=29500",
             str(self.liveavatar_dir / "minimal_inference" / "batch_eval.py"),
             "--task", "s2v-14B",
             "--size", size,
@@ -147,11 +159,7 @@ class LiveAvatarGenerator:
         if settings.liveavatar.enable_fp8:
             cmd.extend(["--enable_fp8", "True"])
         
-        print(f"   Running: {' '.join(cmd[:6])}...")
-        
-        # Run LiveAvatar
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(self.liveavatar_dir) + ":" + env.get("PYTHONPATH", "")
+        print(f"   Running: torchrun --nproc_per_node=1 batch_eval.py...")
         
         try:
             result = subprocess.run(
