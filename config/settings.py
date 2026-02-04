@@ -48,6 +48,7 @@ class OpenAIConfig(BaseModel):
     """OpenAI configuration"""
     api_key: str = os.getenv("OPENAI_API_KEY", "")
     model: str = "gpt-4o"
+    temperature: float = 0.8
 
 
 class LiveAvatarConfig(BaseModel):
@@ -140,6 +141,7 @@ class Settings:
     openai = OpenAIConfig()
     liveavatar = LiveAvatarConfig()
     characters = CHARACTERS
+    words_per_minute: int = 150  # Average speaking rate
     
     @classmethod
     def validate(cls) -> list[str]:

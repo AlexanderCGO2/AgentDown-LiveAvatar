@@ -76,9 +76,10 @@ async def generate_segment(
 ):
     """Generate a complete show segment"""
     
-    from scripts.dialogue_generator import DialogueGenerator
+    from scripts.dialogue_generator import generate_dialogue, generate_intro, generate_outro
     from scripts.generate_audio import generate_all_audio
     from scripts.generate_video import LiveAvatarGenerator
+    import json
     
     # Create output directory
     timestamp = int(time.time())
@@ -95,20 +96,34 @@ async def generate_segment(
     
     # Step 1: Generate dialogue
     print("\n1️⃣  GENERATING DIALOGUE...")
-    dialogue_gen = DialogueGenerator()
-    dialogue = dialogue_gen.generate_segment(
+    
+    dialogue = []
+    
+    # Generate intro
+    if include_intro:
+        print("   Generating intro...")
+        intro = generate_intro()
+        dialogue.extend(intro)
+    
+    # Generate main segment
+    print(f"   Generating {segment_type} segment...")
+    segment_dialogue = await generate_dialogue(
         segment_type=segment_type,
         topic=topic,
-        duration_seconds=duration,
-        include_intro=include_intro,
-        include_outro=include_outro
+        target_duration=duration,
     )
+    dialogue.extend(segment_dialogue)
+    
+    # Generate outro
+    if include_outro:
+        print("   Generating outro...")
+        outro = generate_outro(segment_summary=topic)
+        dialogue.extend(outro)
     
     # Save dialogue
     dialogue_path = output_dir / "dialogue.json"
-    import json
     with open(dialogue_path, "w") as f:
-        json.dump([line.model_dump() for line in dialogue], f, indent=2)
+        json.dump(dialogue, f, indent=2)
     print(f"   📝 Saved {len(dialogue)} lines to {dialogue_path}")
     
     # Step 2: Generate audio
@@ -132,7 +147,7 @@ async def generate_segment(
     print("\n3️⃣  GENERATING VIDEO (LiveAvatar)...")
     
     # Determine primary host from dialogue
-    primary_host = dialogue[0].speaker if dialogue else "SIGMA-7"
+    primary_host = dialogue[0].get("host", "SIGMA-7") if dialogue else "SIGMA-7"
     
     video_dir = output_dir / "video"
     video_dir.mkdir(exist_ok=True)
