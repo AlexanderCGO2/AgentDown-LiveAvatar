@@ -125,12 +125,16 @@ class LiveAvatarGenerator:
         env["WORLD_SIZE"] = "1"
         env["LOCAL_RANK"] = "0"
         
+        # Use smaller resolution for single GPU to fit in memory
+        # 704*384 is recommended for single GPU in LiveAvatar docs
+        single_gpu_size = "704*384"
+        
         # Use s2v_streaming_interact.py - simpler than batch_eval.py for single samples
         cmd = [
             "python",
             str(self.liveavatar_dir / "minimal_inference" / "s2v_streaming_interact.py"),
             "--task", "s2v-14B",
-            "--size", size,
+            "--size", single_gpu_size,  # Use smaller size for single GPU
             "--ckpt_dir", str(self.base_model_path),
             "--training_config", str(self.liveavatar_dir / "liveavatar" / "configs" / "s2v_causal_sft.yaml"),
             "--load_lora",
@@ -148,11 +152,9 @@ class LiveAvatarGenerator:
             "--single_gpu",
             "--offload_model", "True",
             "--convert_model_dtype",
+            "--offload_kv_cache",  # Offload KV cache to save VRAM
+            "--fp8",  # Enable FP8 quantization to reduce memory
         ]
-        
-        # Add FP8 if enabled (for memory savings)
-        if settings.liveavatar.enable_fp8:
-            cmd.append("--fp8")
         
         print(f"   Running: python batch_eval.py (with distributed env vars)...")
         print(f"   Command: {' '.join(cmd)}")
