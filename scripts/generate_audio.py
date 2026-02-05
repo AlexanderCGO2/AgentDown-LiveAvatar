@@ -152,13 +152,22 @@ def generate_single_audio(
             voice_settings["style"] = min(voice_settings.get("style", 0.3) + 0.2, 0.7)
     
     # Build request parameters
+    model_id = settings.elevenlabs.model
+    
+    # eleven_v3 only accepts stability: 0.0, 0.5, or 1.0
+    stability = voice_settings.get("stability", 0.5)
+    if "v3" in model_id:
+        # Snap to nearest valid value
+        valid_stabilities = [0.0, 0.5, 1.0]
+        stability = min(valid_stabilities, key=lambda x: abs(x - stability))
+    
     request_params = {
         "voice_id": voice_id,
         "text": text.strip(),
-        "model_id": settings.elevenlabs.model,
+        "model_id": model_id,
         "output_format": OUTPUT_FORMAT,
         "voice_settings": VoiceSettings(
-            stability=voice_settings.get("stability", 0.5),
+            stability=stability,
             similarity_boost=voice_settings.get("similarity_boost", 0.75),
             style=voice_settings.get("style", 0.3),
         ),
