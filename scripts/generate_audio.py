@@ -174,7 +174,6 @@ def generate_single_audio(
     }
     
     # Add optional parameters for continuity (not supported by eleven_v3)
-    model_id = settings.elevenlabs.model
     if "v3" not in model_id:
         if previous_text:
             request_params["previous_text"] = previous_text

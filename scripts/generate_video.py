@@ -354,8 +354,15 @@ class LiveAvatarGenerator:
             "--offload_model", "True",
             "--convert_model_dtype",
             "--offload_kv_cache",  # Offload KV cache to save VRAM
-            "--fp8",  # Enable FP8 quantization to reduce memory
         ]
+        
+        # FP8 only works on H100/H800 (Hopper architecture), not A100
+        gpu_name = torch.cuda.get_device_name(0).lower()
+        if "h100" in gpu_name or "h800" in gpu_name:
+            cmd.append("--fp8")
+            print("   FP8: Enabled (H100/H800 detected)")
+        else:
+            print(f"   FP8: Disabled ({gpu_name} - not Hopper architecture)")
         
         print(f"   Running: python batch_eval.py (with distributed env vars)...")
         print(f"   Command: {' '.join(cmd)}")
