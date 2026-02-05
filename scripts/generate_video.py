@@ -62,8 +62,8 @@ def check_gpu() -> Tuple[str, float, int]:
 def is_multi_gpu_mode() -> bool:
     """Check if we should use multi-GPU real-time mode"""
     gpu_count = torch.cuda.device_count() if torch.cuda.is_available() else 0
-    # Multi-GPU mode requires 5 GPUs and can be disabled via env var
-    return gpu_count >= 5 and os.environ.get("LIVEAVATAR_SINGLE_GPU", "").lower() != "true"
+    # Multi-GPU mode requires 4+ GPUs and can be disabled via env var
+    return gpu_count >= 4 and os.environ.get("LIVEAVATAR_SINGLE_GPU", "").lower() != "true"
 
 
 class LiveAvatarGenerator:
@@ -83,11 +83,14 @@ class LiveAvatarGenerator:
         self.model_path = Path(settings.liveavatar.model_path)
         self.base_model_path = Path(settings.liveavatar.base_model_path)
         
-        # Determine mode
-        self.multi_gpu = self.gpu_count >= 5 and not force_single_gpu
+        # Determine mode - 4 GPUs minimum for multi-GPU mode
+        self.multi_gpu = self.gpu_count >= 4 and not force_single_gpu
         if self.multi_gpu:
-            print("🚀 Using MULTI-GPU mode (5 GPUs, 45 FPS real-time)")
+            # Calculate DiT GPUs: total - 1 (for VAE)
+            self.num_gpus_dit = self.gpu_count - 1
+            print(f"🚀 Using MULTI-GPU mode ({self.gpu_count} GPUs: {self.num_gpus_dit} DiT + 1 VAE)")
         else:
+            self.num_gpus_dit = 1
             print("📦 Using SINGLE-GPU mode (batch generation)")
         
         # Generation parameters
@@ -148,12 +151,12 @@ class LiveAvatarGenerator:
         else:
             size = "720*400"
         
-        print(f"🚀 Generating video with LiveAvatar MULTI-GPU (45 FPS)...")
+        print(f"🚀 Generating video with LiveAvatar MULTI-GPU...")
         print(f"   Reference: {reference_image}")
         print(f"   Audio: {audio_path}")
         print(f"   Resolution: {size}")
         print(f"   Steps: {num_inference_steps}")
-        print(f"   GPUs: 5 (4 DiT + 1 VAE)")
+        print(f"   GPUs: {self.gpu_count} ({self.num_gpus_dit} DiT + 1 VAE)")
         print(f"   Compile: {enable_compile}")
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -161,15 +164,17 @@ class LiveAvatarGenerator:
         # Environment for multi-GPU
         env = os.environ.copy()
         env["PYTHONPATH"] = str(self.liveavatar_dir) + ":" + env.get("PYTHONPATH", "")
-        env["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4"
+        # Set CUDA devices based on GPU count
+        cuda_devices = ",".join(str(i) for i in range(self.gpu_count))
+        env["CUDA_VISIBLE_DEVICES"] = cuda_devices
         env["NCCL_DEBUG"] = "WARN"
         env["NCCL_DEBUG_SUBSYS"] = "OFF"
         env["ENABLE_COMPILE"] = "true" if enable_compile else "false"
         
-        # Multi-GPU command using torchrun with 5 processes
+        # Multi-GPU command using torchrun with N processes (one per GPU)
         cmd = [
             "torchrun",
-            "--nproc_per_node=5",
+            f"--nproc_per_node={self.gpu_count}",
             "--master_port=29102",
             str(self.liveavatar_dir / "minimal_inference" / "s2v_streaming_interact.py"),
             "--ulysses_size", "1",
@@ -189,7 +194,7 @@ class LiveAvatarGenerator:
             "--sample_steps", str(num_inference_steps),
             "--sample_guide_scale", "0",
             "--num_clip", str(num_clips),
-            "--num_gpus_dit", "4",  # 4 GPUs for DiT
+            "--num_gpus_dit", str(self.num_gpus_dit),  # N-1 GPUs for DiT (1 for VAE)
             "--sample_solver", "euler",
             "--enable_vae_parallel",  # 1 GPU for VAE
             "--save_dir", str(output_path.parent),
@@ -203,7 +208,7 @@ class LiveAvatarGenerator:
         else:
             print(f"   FP8: Disabled ({gpu_name} - not Hopper architecture)")
         
-        print(f"   Running: torchrun --nproc_per_node=5 s2v_streaming_interact.py...")
+        print(f"   Running: torchrun --nproc_per_node={self.gpu_count} s2v_streaming_interact.py...")
         
         try:
             result = subprocess.run(
