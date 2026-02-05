@@ -175,6 +175,7 @@ class LiveAvatarGenerator:
             "--ulysses_size", "1",
             "--task", "s2v-14B",
             "--size", size,
+            "--ckpt_dir", str(self.base_model_path),  # Base model checkpoint directory
             "--base_seed", "420",
             "--training_config", str(self.liveavatar_dir / "liveavatar" / "configs" / "s2v_causal_sft.yaml"),
             "--offload_model", "False",  # Keep on GPU for speed
