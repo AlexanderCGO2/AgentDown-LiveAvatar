@@ -62,8 +62,8 @@ def check_gpu() -> Tuple[str, float, int]:
 def is_multi_gpu_mode() -> bool:
     """Check if we should use multi-GPU real-time mode"""
     gpu_count = torch.cuda.device_count() if torch.cuda.is_available() else 0
-    # Multi-GPU mode requires 4+ GPUs and can be disabled via env var
-    return gpu_count >= 4 and os.environ.get("LIVEAVATAR_SINGLE_GPU", "").lower() != "true"
+    # Multi-GPU mode requires 5+ GPUs and can be disabled via env var
+    return gpu_count >= 5 and os.environ.get("LIVEAVATAR_SINGLE_GPU", "").lower() != "true"
 
 
 class LiveAvatarGenerator:
@@ -83,14 +83,16 @@ class LiveAvatarGenerator:
         self.model_path = Path(settings.liveavatar.model_path)
         self.base_model_path = Path(settings.liveavatar.base_model_path)
         
-        # Determine mode - 4 GPUs minimum for multi-GPU mode
-        self.multi_gpu = self.gpu_count >= 4 and not force_single_gpu
+        # Determine mode - LiveAvatar TPP requires 5+ GPUs
+        self.multi_gpu = self.gpu_count >= 5 and not force_single_gpu
         if self.multi_gpu:
             # Calculate DiT GPUs: total - 1 (for VAE)
             self.num_gpus_dit = self.gpu_count - 1
             print(f"🚀 Using MULTI-GPU mode ({self.gpu_count} GPUs: {self.num_gpus_dit} DiT + 1 VAE)")
         else:
             self.num_gpus_dit = 1
+            if self.gpu_count >= 4:
+                print("⚠️  LiveAvatar TPP requires 5 GPUs; falling back to single-GPU mode")
             print("📦 Using SINGLE-GPU mode (batch generation)")
         
         # Generation parameters

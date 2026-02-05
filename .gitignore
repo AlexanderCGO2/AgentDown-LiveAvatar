@@ -6,13 +6,17 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Models (large files)
-models/
+# Models (large weight files - top-level only)
+/models/
 *.safetensors
 *.bin
 *.ckpt
 *.pt
 *.pth
+
+# But keep the liveavatar Python models package
+!liveavatar_lib/liveavatar/models/
+!liveavatar_lib/liveavatar/models/**/*.py
 
 # Output
 output/
